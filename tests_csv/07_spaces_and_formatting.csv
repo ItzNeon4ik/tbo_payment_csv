@@ -1,0 +1,5 @@
+﻿payment_date,source,payer,account_number,amount,external_id
+ 2026-05-09 , kaspi ,  Ахметова С.  , 100015 , 3500 , KSP-0012 
+2026-05-09,kaspi,Ахметова С.,100015,3500,KSP-0012
+2026-05-09,kaspi,Ахметова С.,100015,3 500,KSP-0013
+2026-05-09,kaspi,Ахметова С.,100015,"3500,75",KSP-0014

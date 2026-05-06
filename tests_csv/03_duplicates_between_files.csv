@@ -1,0 +1,4 @@
+﻿payment_date,source,payer,account_number,amount,external_id
+2026-05-01,kaspi,Иванов И.И.,100001,2500,KSP-0001
+2026-05-02,halyk,Сидорова А.А.,100003,3200,HLK-0001
+2026-05-05,forte,Нурмаганбетова Л.,100005,4100,FRT-0001

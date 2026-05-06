@@ -1,0 +1,5 @@
+﻿payment_date,source,payer,account_number,amount,external_id
+2026-05-01,kaspi,Иванов И.И.,100001,2500,KSP-0001
+2026-05-01,kaspi,Петров П.П.,100002,1800.50,KSP-0002
+2026-05-02,halyk,Сидорова А.А.,100003,3200,HLK-0001
+2026-05-03,manual,ТОО Ромашка,200001,15000,MAN-0001
