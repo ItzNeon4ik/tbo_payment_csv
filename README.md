@@ -1,4 +1,4 @@
-# 🖨️Converter_payments_csv
+# 🖨️tbo_payments_csv
 
 Мой первый репозиторий с решением задачи с практики.
 
