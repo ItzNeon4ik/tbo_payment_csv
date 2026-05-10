@@ -5,7 +5,7 @@ import csv
 
 mainfolder = os.getcwd()
 os.chdir('tests_csv')
-log_path = mainfolder + "\\error_log.txt"
+log_path = os.path.join(mainfolder + "/errors.log")
 results = {
     "files": 0,
     "rows": 0,
@@ -13,7 +13,6 @@ results = {
     "dublicates": 0,
     "errors": 0
 }
-
 
 def filter_csv(current_file):
     if ".csv" in current_file:
@@ -47,8 +46,14 @@ def check_value(s):
     else:
         return True
 
+def empty_check(s):
+    for a in range(len(s)-2): #Что бы не проверял external_id
+        if not str(s[a]).strip():
+            return True
+    return False
+
 def create_result(result, folder):
-    result_path = folder + "\\result.txt"
+    result_path = os.path.join(folder + "/result.log")
     with open(result_path, 'w', encoding='utf-8') as result_file:
         result_file.write("Обработано файлов: " + str(result["files"]) + "\n")
         result_file.write("Всего строк: " + str(result["rows"]) + "\n")
@@ -83,25 +88,30 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
     #Это цикл файлов
     for i in range (len(csv_files)):
         results["files"] += 1
-        with open(mainfolder+"\\tests_csv\\"+csv_files[i], 'r', encoding='utf-8') as file:
+        with open(os.path.join(mainfolder+"/tests_csv/"+csv_files[i]), 'r', encoding='utf-8-sig') as file:
             csv_reader = csv.reader(file, delimiter=',')
             row_number = 0
+            row_names = []
             #Это цикл строк
             for row in csv_reader:
                 temp_array = row
                 results["rows"] += 1
 
+                if row_number == 0:
+                    row_names = temp_array
+
                 # Это цикл слов
                 for j in range(len(temp_array)):
                     temp_array[j] = clean_value(temp_array[j])
 
-                if "" in temp_array and temp_array[len(temp_array)-1] != "":
+                # Почему не сделать просто словарь? Потому что я буквально выше вызываю значения по индексу. Если менять главную перменную здесь на словарь, то придётся переписывать всё под новую логику.
+                if empty_check(temp_array):
                     msg = f"[{csv_files[i]} | строка {row_number}] Отсутствуют критические значения: {temp_array}"
                     log_file.write(msg + "\n")
                     results["errors"] += 1
 
-                elif not check_value(temp_array[4]) and row_number != 0:
-                    msg = f"[{csv_files[i]} | строка {row_number}] Неверный тип данных в ячейке: {temp_array[4]}"
+                elif not check_value(temp_array[row_names.index("amount")]) and row_number != 0:
+                    msg = f"[{csv_files[i]} | строка {row_number}] Неверный тип данных в ячейке: {temp_array[row_names.index("amount")]}"
                     log_file.write(msg + "\n")
                     results["errors"] += 1
 
@@ -112,7 +122,12 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
                             INSERT OR IGNORE INTO payments
                             (payment_date, source, payer, account_number, amount, external_id)
                             VALUES (?, ?, ?, ?, ?, ?)
-                        """, (temp_array[0], temp_array[1], temp_array[2], temp_array[3], temp_array[4], temp_array[5] if len(temp_array) > 5 else None))
+                        """, (temp_array[row_names.index("payment_date")],
+                              temp_array[row_names.index("source")],
+                              temp_array[row_names.index("payer")],
+                              temp_array[row_names.index("account_number")],
+                              temp_array[row_names.index("amount")],
+                              temp_array[row_names.index("external_id")] if len(temp_array) > 5 else None))
                         results["added"] += 1
 
                         if db.total_changes == changes_before:
@@ -121,5 +136,6 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
                             results["dublicates"] += 1
 
                 row_number += 1
+    db.commit()
 
 create_result(results, mainfolder)
