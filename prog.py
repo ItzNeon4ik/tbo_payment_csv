@@ -1,11 +1,9 @@
 import os
 import sqlite3
-import sqlite3 as sql
 import csv
 
-mainfolder = os.getcwd()
-log_path = os.path.join(mainfolder + "/errors.log")
-names_get = 0
+main_folder = os.getcwd()
+log_path = os.path.join(main_folder, "errors.log")
 results = {
     "files": 0,
     "rows": 0,
@@ -48,7 +46,7 @@ def empty_check(s):
     return False
 
 def create_result(result, folder):
-    result_path = os.path.join(folder + "/result.log")
+    result_path = os.path.join(folder, "result.log")
     with open(result_path, 'w', encoding='utf-8') as result_file:
         result_file.write("Обработано файлов: " + str(result["files"]) + "\n")
         result_file.write("Всего строк: " + str(result["rows"]) + "\n")
@@ -57,12 +55,12 @@ def create_result(result, folder):
         result_file.write("Ошибок: " + str(result["errors"]) + "\n")
         result_file.write("Ошибок SQLite3: " + str(result["sqlite.errors"]) + "\n")
 
-csv_files = [f for f in os.listdir(os.path.join(mainfolder+"/tests_csv")) if f.endswith(".csv")]
-
 def get_db():
-    conn = sql.connect('payments.db')
+    conn = sqlite3.connect('payments.db')
     conn.row_factory = sqlite3.Row
     return conn
+
+csv_files = [f for f in os.listdir(os.path.join(main_folder, "tests_csv")) if f.endswith(".csv")]
 
 with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
     db.execute("""
@@ -81,9 +79,9 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
     #Это цикл файлов
     for filename in csv_files:
         results["files"] += 1
-        with open(os.path.join(mainfolder+"/tests_csv/"+filename), 'r', encoding='utf-8-sig') as file:
+        with open(os.path.join(main_folder, "tests_csv", filename), 'r', encoding='utf-8-sig') as file:
             csv_reader = csv.reader(file, delimiter=',')
-            row_number = 0
+            row_number = 1
 
             headers = next(csv_reader)
             column_map = {name: i for i, name in enumerate(headers)}
@@ -91,51 +89,51 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
             #Это цикл строк
             for row in csv_reader:
                 temp_array = row
+
                 results["rows"] += 1
 
                 # Это цикл слов
                 for j in range(len(temp_array)):
                     temp_array[j] = clean_value(temp_array[j])
 
-                # Почему не сделать просто словарь? Потому что я буквально выше вызываю значения по индексу. Если менять главную перменную здесь на словарь, то придётся переписывать всё под новую логику.
-                if row_number != 0 and empty_check(temp_array):
+                # Почему не сделать просто словарь? Потому что я буквально выше вызываю значения по индексу. Если менять главную переменную здесь на словарь, то придётся переписывать всё под новую логику.
+                if empty_check(temp_array):
                     msg = f"[{filename} | строка {row_number}] Отсутствуют критические значения: {temp_array}"
                     log_file.write(msg + "\n")
                     results["errors"] += 1
 
-                elif row_number != 0 and not check_value(temp_array[column_map["amount"]]):
+                elif not check_value(temp_array[column_map["amount"]]):
                     msg = f"[{filename} | строка {row_number}] Неверный тип данных в ячейке: {temp_array[column_map["amount"]]}"
                     log_file.write(msg + "\n")
                     results["errors"] += 1
 
                 else:
-                    if row_number != 0:
-                        try:
-                            changes_before = db.total_changes
-                            db.execute("""
-                                INSERT OR IGNORE INTO payments
-                                (payment_date, source, payer, account_number, amount, external_id)
-                                VALUES (?, ?, ?, ?, ?, ?)
-                            """, (temp_array[column_map["payment_date"]],
-                                  temp_array[column_map["source"]],
-                                  temp_array[column_map["payer"]],
-                                  temp_array[column_map["account_number"]],
-                                  temp_array[column_map["amount"]],
-                                  temp_array[column_map["external_id"]] if len(temp_array) > 5 else None))
+                    try:
+                        changes_before = db.total_changes
+                        db.execute("""
+                            INSERT OR IGNORE INTO payments
+                            (payment_date, source, payer, account_number, amount, external_id)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        """, (temp_array[column_map["payment_date"]],
+                              temp_array[column_map["source"]],
+                              temp_array[column_map["payer"]],
+                              temp_array[column_map["account_number"]],
+                              temp_array[column_map["amount"]],
+                              temp_array[column_map["external_id"]] if "external_id" in column_map else None))
 
-                            if db.total_changes == changes_before:
-                                msg = f"[{filename} | строка {row_number}] Дубликат пропущен: {temp_array}"
-                                log_file.write(msg + "\n")
-                                results["duplicates"] += 1
-                                continue
+                        if db.total_changes == changes_before:
+                            msg = f"[{filename} | строка {row_number}] Дубликат пропущен: {temp_array}"
+                            log_file.write(msg + "\n")
+                            results["duplicates"] += 1
+                            continue
 
-                            results["added"] += 1
+                        results["added"] += 1
 
-                        except sqlite3.Error as e:
-                            results["sqlite.errors"] += 1
-                            log_file.write(f"[{filename} | строка {row_number}] SQLite ошибка: {e}\n")
+                    except sqlite3.Error as e:
+                        results["sqlite.errors"] += 1
+                        log_file.write(f"[{filename} | строка {row_number}] SQLite ошибка: {e}\n")
 
                 row_number += 1
     db.commit()
 
-create_result(results, mainfolder)
+create_result(results, main_folder)
