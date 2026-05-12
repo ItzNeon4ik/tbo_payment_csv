@@ -39,10 +39,11 @@ def check_value(s):
     else:
         return True
 
-def empty_check(s):
-    for a in range(len(s)-2): #Что бы не проверял external_id
-        if not str(s[a]).strip():
-            return True
+def empty_check(s, excludes):
+    for a in range(len(s)):
+        if a not in excludes:
+            if not str(s[a]).strip():
+                return True
     return False
 
 def create_result(result, folder):
@@ -69,7 +70,7 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
         payment_date TEXT,
         source TEXT,
         payer TEXT,
-        account_number INTEGER,
+        account_number TEXT,
         amount REAL,
         external_id TEXT,
         UNIQUE(payment_date, source, account_number, amount, external_id)
@@ -93,18 +94,18 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
                 row_number += 1
                 results["rows"] += 1
 
-                # Это цикл слов
                 for j in range(len(temp_array)):
-                    temp_array[j] = clean_value(temp_array[j])
+                    if j not in [column_map["account_number"], column_map["external_id"]]:
+                        temp_array[j] = clean_value(temp_array[j])
 
-                # Почему не сделать просто словарь? Потому что я буквально выше вызываю значения по индексу. Если менять главную переменную здесь на словарь, то придётся переписывать всё под новую логику.
-                if empty_check(temp_array):
+                if empty_check(temp_array, column_map["external_id"]):
                     msg = f"[{filename} | строка {row_number}] Отсутствуют критические значения: {temp_array}"
                     log_file.write(msg + "\n")
                     results["errors"] += 1
 
                 elif not check_value(temp_array[column_map["amount"]]):
-                    msg = f"[{filename} | строка {row_number}] Неверный тип данных в ячейке: {temp_array[column_map["amount"]]}"
+                    vessel = temp_array[column_map["amount"]]
+                    msg = f"[{filename} | строка {row_number}] Неверный тип данных в ячейке: {vessel}"
                     log_file.write(msg + "\n")
                     results["errors"] += 1
 
