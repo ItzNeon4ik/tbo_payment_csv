@@ -81,7 +81,7 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
         results["files"] += 1
         with open(os.path.join(main_folder, "tests_csv", filename), 'r', encoding='utf-8-sig') as file:
             csv_reader = csv.reader(file, delimiter=',')
-            row_number = 1
+            row_number = 0
 
             headers = next(csv_reader)
             column_map = {name: i for i, name in enumerate(headers)}
@@ -90,6 +90,7 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
             for row in csv_reader:
                 temp_array = row
 
+                row_number += 1
                 results["rows"] += 1
 
                 # Это цикл слов
@@ -109,8 +110,7 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
 
                 else:
                     try:
-                        changes_before = db.total_changes
-                        db.execute("""
+                        cursor = db.execute("""
                             INSERT OR IGNORE INTO payments
                             (payment_date, source, payer, account_number, amount, external_id)
                             VALUES (?, ?, ?, ?, ?, ?)
@@ -121,19 +121,18 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
                               temp_array[column_map["amount"]],
                               temp_array[column_map["external_id"]] if "external_id" in column_map else None))
 
-                        if db.total_changes == changes_before:
+                        if cursor.rowcount == 0:
                             msg = f"[{filename} | строка {row_number}] Дубликат пропущен: {temp_array}"
                             log_file.write(msg + "\n")
                             results["duplicates"] += 1
-                            continue
-
-                        results["added"] += 1
+                        else:
+                            results["added"] += 1
 
                     except sqlite3.Error as e:
                         results["sqlite.errors"] += 1
                         log_file.write(f"[{filename} | строка {row_number}] SQLite ошибка: {e}\n")
 
-                row_number += 1
-    db.commit()
+
+        db.commit()
 
 create_result(results, main_folder)
