@@ -71,7 +71,8 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
         payer TEXT,
         account_number INTEGER,
         amount REAL,
-        external_id TEXT
+        external_id TEXT,
+        UNIQUE(payment_date, source, account_number, amount, external_id)
     )
     """)
 
@@ -109,43 +110,29 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
 
                 else:
                     try:
-                        if temp_array[column_map["external_id"]]:
-                            cursor = db.execute("""
-                                SELECT id FROM payments WHERE external_id = ?
-                            """, (temp_array[column_map["external_id"]],))
-                            is_duplicate = cursor.fetchone() is not None
-                        else:
-                            cursor = db.execute("""
-                                SELECT id FROM payments
-                                WHERE payment_date = ? AND source = ? AND account_number = ? AND amount = ?
-                            """, (temp_array[column_map["payment_date"]],
-                                  temp_array[column_map["source"]],
-                                  temp_array[column_map["account_number"]],
-                                  temp_array[column_map["amount"]]))
-                            is_duplicate = cursor.fetchone() is not None
+                        changes_before = db.total_changes
+                        db.execute("""
+                            INSERT OR IGNORE INTO payments
+                            (payment_date, source, payer, account_number, amount, external_id)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        """, (temp_array[column_map["payment_date"]],
+                              temp_array[column_map["source"]],
+                              temp_array[column_map["payer"]],
+                              temp_array[column_map["account_number"]],
+                              temp_array[column_map["amount"]],
+                              temp_array[column_map["external_id"]]))
 
-                        if is_duplicate:
+                        if db.total_changes == changes_before:
                             msg = f"[{filename} | строка {row_number}] Дубликат пропущен: {temp_array}"
                             log_file.write(msg + "\n")
                             results["duplicates"] += 1
-                        else:
-                            db.execute("""
-                                INSERT INTO payments
-                                (payment_date, source, payer, account_number, amount, external_id)
-                                VALUES (?, ?, ?, ?, ?, ?)
-                            """, (temp_array[column_map["payment_date"]],
-                                  temp_array[column_map["source"]],
-                                  temp_array[column_map["payer"]],
-                                  temp_array[column_map["account_number"]],
-                                  temp_array[column_map["amount"]],
-                                  temp_array[column_map[
-                                      "external_id"]] if "external_id" in column_map else None))
-                            results["added"] += 1
+                            continue
+
+                        results["added"] += 1
 
                     except sqlite3.Error as e:
                         results["sqlite.errors"] += 1
                         log_file.write(f"[{filename} | строка {row_number}] SQLite ошибка: {e}\n")
-
 
         db.commit()
 
