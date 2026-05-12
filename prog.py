@@ -117,9 +117,9 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
                         else:
                             cursor = db.execute("""
                                 SELECT id FROM payments
-                                WHERE payment_date = ? AND payer = ? AND account_number = ? AND amount = ?
+                                WHERE payment_date = ? AND source = ? AND account_number = ? AND amount = ?
                             """, (temp_array[column_map["payment_date"]],
-                                  temp_array[column_map["payer"]],
+                                  temp_array[column_map["source"]],
                                   temp_array[column_map["account_number"]],
                                   temp_array[column_map["amount"]]))
                             is_duplicate = cursor.fetchone() is not None
