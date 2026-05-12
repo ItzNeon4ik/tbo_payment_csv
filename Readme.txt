@@ -1,15 +1,15 @@
 tbo_payment_csv - является программой для переноса данных определённого типа в базу данных с расширением db.
 
 Требования к запуску:
-* Python версии 3.14+
-* csv файлы с наименованиями столбцов ТОЛЬКО как: payment_date, source, payer, account_number, amount, external_id
+* Python версии 3.6+;
+* csv файлы с наименованиями столбцов ТОЛЬКО как: payment_date, source, payer, account_number, amount, external_id;
+* Все csv файлы должны иметь одинаковое расположение столбцов.
 
 Для работы с программой:
 1. Поместите csv файлы в папку tests_csv;
-2. Запустите prog.py;
-3. В папке с этим Readme.txt должны появиться payments.db, error_log.txt, result.txt.
+2. Запустите prog.py/Напишите в консоли python prog.py;
+3. В папке с этим Readme.txt должны появиться payments.db, errors.log, result.log.
 
 Если программа не работает, проверьте:
 * csv файлы должны иметь наименования столбцов ТОЛЬКО как указано в требованиях;
 * Обновлён ли Python до актуальной версии;
-* Установлена ли библиотека sqlite3 (если нет, введите в cmd команду "pip --intsall sqlite3" без кавычек).
