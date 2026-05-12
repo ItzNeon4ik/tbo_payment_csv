@@ -98,7 +98,7 @@ with open(log_path, 'w', encoding='utf-8') as log_file, get_db() as db:
                     if j not in [column_map["account_number"], column_map["external_id"]]:
                         temp_array[j] = clean_value(temp_array[j])
 
-                if empty_check(temp_array, column_map["external_id"]):
+                if empty_check(temp_array, [column_map["external_id"]]):
                     msg = f"[{filename} | строка {row_number}] Отсутствуют критические значения: {temp_array}"
                     log_file.write(msg + "\n")
                     results["errors"] += 1
